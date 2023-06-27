@@ -1,4 +1,5 @@
 from discord.app_commands import CommandTree
+from constants import *
 import discord
 
 
@@ -21,6 +22,11 @@ class LCBot(discord.Client):
             print(f"Synced {len(synced)} command(s)")
         except Exception as e:
             print(e)
+
+    async def on_member_join(self, member):
+        channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
+        msg = f"Hello {member} welcome to Los Chavales!\n\nHola {member} bienvenido a Los Chavales!"
+        await channel.send(msg)
 
     async def on_interaction(self, interaction: discord.Interaction):
         print(f"el usuario {interaction.user} ha ejecutado {interaction.data['name']}")

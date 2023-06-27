@@ -3,7 +3,7 @@ from bot import LCBot
 
 TOKEN = "MTExMjkzMjgxNDQ2MDA0NzM2MA.GOSzVA.o_spK1IiNOkp--B4a1HSASMlyaSvOwHyTxwJaY"
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.message_content = True
 
 client = LCBot(intents=intents)
