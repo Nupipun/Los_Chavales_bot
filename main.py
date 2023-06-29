@@ -7,4 +7,5 @@ intents = discord.Intents.all()
 intents.message_content = True
 
 client = LCBot(intents=intents)
+
 client.run(TOKEN)

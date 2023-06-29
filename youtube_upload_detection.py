@@ -6,7 +6,7 @@ from constants import *
 class SearchForNewVideo:
     def __init__(self):
         self.youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-        self.json_file = "latest_video_id.json"
+        self.json_file = "json files/latest_video_id.json"
         self.latest_video_id = self.load_latest_video_id()
 
     def check_new_video(self):
