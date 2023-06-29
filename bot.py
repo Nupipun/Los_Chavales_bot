@@ -1,6 +1,8 @@
 from discord.app_commands import CommandTree
 from constants import *
 import discord
+from card_image_logic import create_welcome_card
+from io import BytesIO
 
 
 class LCCommands(CommandTree):
@@ -23,10 +25,19 @@ class LCBot(discord.Client):
         except Exception as e:
             print(e)
 
-    async def on_member_join(self, member):
+    async def on_member_join(self, member: discord.Member):
         channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
+        user_id = member.id
+
+        user = await self.fetch_user(user_id)
+        avatar_data = BytesIO(await user.display_avatar.read())
+
+        card = create_welcome_card(user, avatar_data)
+
+        file = discord.File(card, filename="welcome_card.png")
         msg = f"Hello {member} welcome to Los Chavales!\n\nHola {member} bienvenido a Los Chavales!"
-        await channel.send(msg)
+
+        await channel.send(msg, file=file)
 
     async def on_interaction(self, interaction: discord.Interaction):
         print(f"el usuario {interaction.user} ha ejecutado {interaction.data['name']}")
