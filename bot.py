@@ -16,16 +16,38 @@ class LCCommands(CommandTree):
     def __init__(self, client):
         super().__init__(client)
         node = wavelink.NodePool.get_node()
-        queue = {}
+        cola_link = []
 
         @self.command(name="ping")
         async def ping(interaction: discord.Interaction):
             await interaction.response.send_message("Pong!")
 
-        # TODO Crear queue
+        @self.command(name="queue")
+        async def queue(interaction: discord.Interaction):
+            player = node.get_player(interaction.guild_id)
+
+            track_list = []
+            for _ in range(player.queue.count):
+                cola_str = player.queue.get()
+                track_list.append(f"{'-' * 35}\nNombre: {cola_str}\nLink: {cola_link[_]}\n{'-' * 35}")
+                player.queue.put(cola_str)
+            track_list_str = "\n".join(track_list)
+
+            embed = discord.Embed(
+                title="**Current Queue**",
+                description=track_list_str
+            )
+            await interaction.response.send_message(embed=embed)
+
         @self.command(name="play")
         async def play(interaction: discord.Interaction, search: str):
             player = node.get_player(interaction.guild_id)
+            try:
+                player.autoplay = True
+            except AttributeError:
+                await connect_logic(interaction)
+                player = node.get_player(interaction.guild_id)
+                player.autoplay = True
 
             tracks = await wavelink.YouTubeTrack.search(search)
             if not tracks:
@@ -33,48 +55,31 @@ class LCCommands(CommandTree):
                 return
 
             track = tracks[0]
-            guild_id = interaction.guild_id
-
-            if guild_id not in queue:
-                queue[guild_id] = []
-
-            queue[guild_id].append(track)
 
             if not player.is_playing():
-                await play_next_track(player, guild_id, interaction)
-            else:
-                embed = discord.Embed(
-                    title="**Added to queue**",
-                    description=f"Track: {track}\nLink: {track.uri}"
-                )
-                await interaction.response.send_message(embed=embed)
-            # TODO mejorar esto
-
-        async def play_next_track(player, guild_id, interaction):
-            if guild_id in queue and queue[guild_id]:
-                track = queue[guild_id].pop(0)
-                try:
-                    await player.play(track)
-                except AttributeError:
-                    await interaction.response.send_message("Please use /connect first!")
-
+                await player.play(track)
                 embed = discord.Embed(
                     title="**Now playing**",
                     description=f"Track: {track}\nLink: {track.uri}"
                 )
                 await interaction.response.send_message(embed=embed)
             else:
-                await player.stop()
+                player.queue.put(track)
+                cola_link.append(track.uri)
                 embed = discord.Embed(
-                    title="**Queue is empty**",
-                    description="There are no more songs in the queue."
+                    title="**Added to queue**",
+                    description=f"Track: {track}\nLink: {track.uri}"
                 )
                 await interaction.response.send_message(embed=embed)
 
         @self.command(name="skip")
         async def skip(interaction: discord.Interaction):
             player = node.get_player(interaction.guild_id)
-            await play_next_track(player, interaction.guild_id, interaction)
+            embed = discord.Embed(
+                title="Skipping track..."
+            )
+            await player.stop()
+            await interaction.response.send_message(embed=embed)
 
         @self.command(name="stop")
         async def stop(interaction: discord.Interaction):
@@ -82,20 +87,14 @@ class LCCommands(CommandTree):
             if not player.is_playing:
                 await interaction.response.send_message("No track is currently playing")
                 return
-
+            for _ in range(player.queue.count):
+                player.queue.pop()
             await player.stop()
             await interaction.response.send_message("Playback stopped.")
 
         @self.command(name="connect")
         async def connect(interaction: discord.Interaction):
-            try:
-                channel = interaction.user.voice.channel
-            except AttributeError:
-                return await interaction.response.send_message("No voice channel to connect to.")
-
-            vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
-            await interaction.response.send_message(f"Joined voice channel {channel.name}")
-            return vc
+            await connect_logic(interaction)
 
         @self.command(name="disconnect")
         async def connect(interaction: discord.Interaction):
@@ -108,19 +107,28 @@ class LCCommands(CommandTree):
                 ephemeral=True
             )
 
+        async def connect_logic(interaction):
+            try:
+                channel = interaction.user.voice.channel
+            except AttributeError:
+                return await interaction.response.send_message("No voice channel to connect to.")
+
+            vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
+            await interaction.response.send_message(f"Joined voice channel {channel.name}")
+            return vc
+
 
 class LCBot(discord.Client):
     async def on_ready(self):
         print(f"{self.user.name} is working.")
         try:
-            print("Syncing commands...")
             print("Starting wavelink...")
             t1 = Thread(self.start_lavalink())
             t1.start()
             time.sleep(4)
             node: wavelink.Node = wavelink.Node(uri="http://localhost:2333", password="youshallnotpass")
             await wavelink.NodePool.connect(client=self, nodes=[node])
-            print(node.players)
+            print("Syncing commands...")
             tree = LCCommands(self)
             synced = await tree.sync()
             print(f"Synced {len(synced)} command(s)")
@@ -135,8 +143,13 @@ class LCBot(discord.Client):
         os.chdir("lavalink")
         subprocess.Popen(["java", "-jar", "Lavalink.jar"], creationflags=subprocess.CREATE_NEW_CONSOLE)
 
-    async def on_wavelink_node_ready(self, node: wavelink.Node):
+    async def on_wavelink_node_ready(self, node):
         print(f"wavelink node ready. id: {node.id}")
+
+    # async def on_wavelink_track_end(self, player, track, reason):
+    #     try:
+    #         player.queue.get()
+    #     except
 
     async def on_member_join(self, member: discord.Member):
         channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
