@@ -5,6 +5,7 @@ from card_image_logic import create_welcome_card
 from io import BytesIO
 from youtube_upload_detection import SearchForNewVideo
 from discord.ext import tasks
+import wavelink
 
 
 class LCCommands(CommandTree):
@@ -15,18 +16,63 @@ class LCCommands(CommandTree):
         async def ping(interaction: discord.Interaction):
             await interaction.response.send_message("Pong!")
 
+        @self.command(name="rickroll")
+        async def rickroll(interaction: discord.Interaction):
+            node = wavelink.NodePool.get_node()
+            player = node.get_player(interaction.guild.id)
+
+            tracks = await wavelink.YouTubeTrack.search("Rick Astley Never Gonna Give You Up")
+            if not tracks:
+                await interaction.response.send_message("this track was not found")
+
+            track = tracks[0]
+            await player.play(track)
+
+        @self.command(name="connect")
+        async def connect(interaction: discord.Interaction):
+            try:
+                channel = interaction.user.voice.channel
+            except AttributeError:
+                return await interaction.response.send_message("No voice channel to connect to.", ephemeral=True)
+
+            vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
+            await interaction.response.send_message(f"Joined voice channel {channel.name}", ephemeral=True)
+            return vc
+
+        @self.command(name="disconnect")
+        async def connect(interaction: discord.Interaction):
+            for x in client.voice_clients:
+                await interaction.response.send_message("Disconnecting from the channel...", ephemeral=True)
+                return await x.disconnect()
+
+            return await interaction.response.send_message(
+                "I am not connected to any voice channel on this server!",
+                ephemeral=True
+            )
+
+
+
 
 class LCBot(discord.Client):
     async def on_ready(self):
         print(f"{self.user.name} is working.")
         try:
             print("Syncing commands...")
+
             tree = LCCommands(self)
-            await self.check_new_video.start()
             synced = await tree.sync()
             print(f"Synced {len(synced)} command(s)")
+            print("Starting wavelink...")
+
+            node: wavelink.Node = wavelink.Node(uri="http://localhost:2333", password="penismusic")
+            await wavelink.NodePool.connect(client=self, nodes=[node])
+
+            await self.check_new_video.start()
         except Exception as e:
             print(e)
+
+    async def on_wavelink_node_ready(self, node: wavelink.Node):
+        print(f"wavelink node ready. id: {node.id}")
 
     async def on_member_join(self, member: discord.Member):
         channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
