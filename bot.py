@@ -39,15 +39,18 @@ class LCCommands(CommandTree):
                 queue[guild_id] = []
 
             queue[guild_id].append(track)
-
-            if not player.is_playing():
-                await play_next_track(player, guild_id, interaction)
-            else:
-                embed = discord.Embed(
-                    title="**Added to queue**",
-                    description=f"Track: {track}\nLink: {track.uri}"
-                )
-                await interaction.response.send_message(embed=embed)
+            try:
+                if not player.is_playing():
+                    await play_next_track(player, guild_id, interaction)
+                else:
+                    embed = discord.Embed(
+                        title="**Added to queue**",
+                        description=f"Track: {track}\nLink: {track.uri}"
+                    )
+                    await interaction.response.send_message(embed=embed)
+            except AttributeError:
+                queue[guild_id].clear()
+                await interaction.response.send_message("Please use /connect first!")
             # TODO mejorar esto
 
         async def play_next_track(player, guild_id, interaction):
@@ -79,7 +82,7 @@ class LCCommands(CommandTree):
         @self.command(name="stop")
         async def stop(interaction: discord.Interaction):
             player = node.get_player(interaction.guild.id)
-            if not player.is_playing:
+            if not player.is_playing():
                 await interaction.response.send_message("No track is currently playing")
                 return
 
