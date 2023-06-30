@@ -11,13 +11,12 @@ import time
 from threading import Thread
 import os
 
+
 class LCCommands(CommandTree):
     def __init__(self, client):
         super().__init__(client)
         node = wavelink.NodePool.get_node()
-
-        # TODO Crear comando /queue
-        # TODO Crear comando /skip
+        queue = {}
 
         @self.command(name="ping")
         async def ping(interaction: discord.Interaction):
@@ -27,8 +26,6 @@ class LCCommands(CommandTree):
         @self.command(name="play")
         async def play(interaction: discord.Interaction, search: str):
             player = node.get_player(interaction.guild_id)
-            print(player)
-            print(node.players)
 
             tracks = await wavelink.YouTubeTrack.search(search)
             if not tracks:
@@ -36,16 +33,48 @@ class LCCommands(CommandTree):
                 return
 
             track = tracks[0]
-            try:
-                await player.play(track)
-            except AttributeError:
-                await interaction.response.send_message("Please use /connect first!")
+            guild_id = interaction.guild_id
+
+            if guild_id not in queue:
+                queue[guild_id] = []
+
+            queue[guild_id].append(track)
+
+            if not player.is_playing():
+                await play_next_track(player, guild_id, interaction)
+            else:
+                embed = discord.Embed(
+                    title="**Added to queue**",
+                    description=f"Track: {track}\nLink: {track.uri}"
+                )
+                await interaction.response.send_message(embed=embed)
             # TODO mejorar esto
-            embed = discord.Embed(
-                title="**Now playing**",
-                description=f"Track: {track}\nLink: {track.uri}"
-            )
-            await interaction.response.send_message(embed=embed)
+
+        async def play_next_track(player, guild_id, interaction):
+            if guild_id in queue and queue[guild_id]:
+                track = queue[guild_id].pop(0)
+                try:
+                    await player.play(track)
+                except AttributeError:
+                    await interaction.response.send_message("Please use /connect first!")
+
+                embed = discord.Embed(
+                    title="**Now playing**",
+                    description=f"Track: {track}\nLink: {track.uri}"
+                )
+                await interaction.response.send_message(embed=embed)
+            else:
+                await player.stop()
+                embed = discord.Embed(
+                    title="**Queue is empty**",
+                    description="There are no more songs in the queue."
+                )
+                await interaction.response.send_message(embed=embed)
+
+        @self.command(name="skip")
+        async def skip(interaction: discord.Interaction):
+            player = node.get_player(interaction.guild_id)
+            await play_next_track(player, interaction.guild_id, interaction)
 
         @self.command(name="stop")
         async def stop(interaction: discord.Interaction):
@@ -104,7 +133,7 @@ class LCBot(discord.Client):
     @staticmethod
     def start_lavalink():
         os.chdir("lavalink")
-        subprocess.Popen("java -jar Lavalink.jar")
+        subprocess.Popen(["java", "-jar", "Lavalink.jar"], creationflags=subprocess.CREATE_NEW_CONSOLE)
 
     async def on_wavelink_node_ready(self, node: wavelink.Node):
         print(f"wavelink node ready. id: {node.id}")
