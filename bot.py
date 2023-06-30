@@ -107,6 +107,15 @@ class LCCommands(CommandTree):
                 ephemeral=True
             )
 
+        @self.command(name="volume")
+        async def volume(interaction: discord.Interaction, volume_number: int):
+            player = node.get_player(interaction.guild_id)
+            try:
+                await player.set_volume(volume_number)
+            except AttributeError:
+                await interaction.response.send_message(f"Please use /connect or /play first!")
+            await interaction.response.send_message(f"Volume changed to **{player.volume}%**")
+
         async def connect_logic(interaction):
             try:
                 channel = interaction.user.voice.channel
@@ -132,8 +141,6 @@ class LCBot(discord.Client):
             tree = LCCommands(self)
             synced = await tree.sync()
             print(f"Synced {len(synced)} command(s)")
-
-
             # await self.check_new_video.start()
         except Exception as e:
             print(e)
@@ -145,11 +152,6 @@ class LCBot(discord.Client):
 
     async def on_wavelink_node_ready(self, node):
         print(f"wavelink node ready. id: {node.id}")
-
-    # async def on_wavelink_track_end(self, player, track, reason):
-    #     try:
-    #         player.queue.get()
-    #     except
 
     async def on_member_join(self, member: discord.Member):
         channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
@@ -168,6 +170,7 @@ class LCBot(discord.Client):
     async def on_interaction(self, interaction: discord.Interaction):
         print(f"el usuario {interaction.user} ha ejecutado {interaction.data['name']}")
 
+    # TODO Fix check_new_video
     # @tasks.loop(minutes=5, reconnect=True)
     # async def check_new_video(self):
     #     video = SearchForNewVideo()
