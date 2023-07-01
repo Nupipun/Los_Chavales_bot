@@ -1,13 +1,11 @@
 from googleapiclient.discovery import build
-import json
 from constants import *
+import shelve
 
 
 class SearchForNewVideo:
     def __init__(self):
         self.youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
-        self.json_file = "json files/latest_video_id.json"
-        self.latest_video_id = self.load_latest_video_id()
 
     def check_new_video(self):
         search_response = self.youtube.search().list(
@@ -17,6 +15,7 @@ class SearchForNewVideo:
             type="video"
         ).execute()
 
+        self.latest_video_id = self.load_latest_video_id()
         latest_video_id = search_response["items"][0]["id"]["videoId"]
         video_title = search_response["items"][0]["snippet"]["title"]
         video_link = f"https://www.youtube.com/watch?v={latest_video_id}"
@@ -31,16 +30,15 @@ class SearchForNewVideo:
 
     def load_latest_video_id(self):
         try:
-            with open(self.json_file, "r") as json_file:
-                data = json.load(json_file)
+            with shelve.open("shelve/latest_video_id") as data:
+                print(data["latest_video_id"])
                 return data["latest_video_id"]
         except FileNotFoundError:
             return ""
 
     def save_latest_video_id(self):
-        data = {"latest_video_id": self.latest_video_id}
-        with open(self.json_file, "w") as json_file:
-            json.dump(data, json_file)
+        with shelve.open("shelve/latest_video_id") as data:
+            data["latest_video_id"] = self.latest_video_id
 
 
 if __name__ == "__main__":

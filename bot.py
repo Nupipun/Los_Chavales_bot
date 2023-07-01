@@ -1,3 +1,5 @@
+import typing
+
 from discord.app_commands import CommandTree
 from constants import *
 import discord
@@ -17,6 +19,7 @@ class LCCommands(CommandTree):
         super().__init__(client)
         node = wavelink.NodePool.get_node()
         cola_link = []
+        self.track = []
 
         @self.command(name="ping")
         async def ping(interaction: discord.Interaction):
@@ -27,16 +30,24 @@ class LCCommands(CommandTree):
             player = node.get_player(interaction.guild_id)
 
             track_list = []
-            for _ in range(player.queue.count):
-                cola_str = player.queue.get()
-                track_list.append(f"{'-' * 35}\nNombre: {cola_str}\nLink: {cola_link[_]}\n{'-' * 35}")
-                player.queue.put(cola_str)
-            track_list_str = "\n".join(track_list)
-
-            embed = discord.Embed(
-                title="**Current Queue**",
-                description=track_list_str
-            )
+            try:
+                if player.queue.count != 0:
+                    for _ in range(player.queue.count):
+                        cola_str = player.queue.get()
+                        track_list.append(f"{'-' * 35}\nNombre: {cola_str}\nLink: {cola_link[_]}\n{'-' * 35}")
+                        player.queue.put(cola_str)
+                else:
+                    track_list.append("No songs in the queue.")
+                track_list_str = "\n".join(track_list)
+            except AttributeError:
+                embed = discord.Embed(
+                    title="Not connected to a voicechat."
+                )
+            else:
+                embed = discord.Embed(
+                    title="**Current Queue**",
+                    description=track_list_str
+                )
             await interaction.response.send_message(embed=embed)
 
         @self.command(name="play")
@@ -51,26 +62,42 @@ class LCCommands(CommandTree):
 
             tracks = await wavelink.YouTubeTrack.search(search)
             if not tracks:
-                await interaction.response.send_message("this track was not found")
+                embed = discord.Embed(
+                    title="This track was not found"
+                )
+                await interaction.response.send_message(embed=embed)
                 return
 
-            track = tracks[0]
+            self.track = tracks[0]
 
             if not player.is_playing():
-                await player.play(track)
+                await player.play(self.track)
                 embed = discord.Embed(
                     title="**Now playing**",
-                    description=f"Track: {track}\nLink: {track.uri}"
+                    description=f"Track: {self.track}\nLink: {self.track.uri}"
                 )
-                await interaction.response.send_message(embed=embed)
             else:
-                player.queue.put(track)
-                cola_link.append(track.uri)
+                player.queue.put(self.track)
+                cola_link.append(self.track.uri)
                 embed = discord.Embed(
                     title="**Added to queue**",
-                    description=f"Track: {track}\nLink: {track.uri}"
+                    description=f"Track: {self.track}\nLink: {self.track.uri}"
                 )
-                await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed)
+
+        @self.command(name="nowplaying")
+        async def nowplaying(interaction: discord.Interaction):
+            try:
+                embed = discord.Embed(
+                    title="**Now playing**",
+                    description=f"Track: {self.track}\nLink: {self.track.uri}"
+                )
+            except AttributeError:
+                embed = discord.Embed(
+                    title="**Now playing**",
+                    description=f"There are no tracks playing right now."
+                )
+            await interaction.response.send_message(embed=embed)
 
         @self.command(name="skip")
         async def skip(interaction: discord.Interaction):
@@ -78,8 +105,14 @@ class LCCommands(CommandTree):
             embed = discord.Embed(
                 title="Skipping track..."
             )
-            await player.stop()
-            await interaction.response.send_message(embed=embed)
+            try:
+                await player.stop()
+                await interaction.response.send_message(embed=embed)
+            except AttributeError:
+                embed = discord.Embed(
+                    title="Not connected to a voicechat."
+                )
+                await interaction.response.send_message(embed=embed)
 
         @self.command(name="stop")
         async def stop(interaction: discord.Interaction):
@@ -89,15 +122,27 @@ class LCCommands(CommandTree):
                 return
             for _ in range(player.queue.count):
                 player.queue.pop()
+            self.track = []
             await player.stop()
             await interaction.response.send_message("Playback stopped.")
 
         @self.command(name="connect")
         async def connect(interaction: discord.Interaction):
-            await connect_logic(interaction)
+            try:
+                channel = interaction.user.voice.channel
+            except AttributeError:
+                return await interaction.response.send_message("No voice channel to connect to.")
+
+            await interaction.response.send_message(f"Connected to channel **{channel.name}**")
+            vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
+            return vc
 
         @self.command(name="disconnect")
         async def connect(interaction: discord.Interaction):
+            player = node.get_player(interaction.guild.id)
+            for _ in range(player.queue.count):
+                player.queue.pop()
+            await player.stop()
             for x in client.voice_clients:
                 await interaction.response.send_message("Disconnecting from the channel...")
                 return await x.disconnect()
@@ -116,6 +161,42 @@ class LCCommands(CommandTree):
                 await interaction.response.send_message(f"Please use /connect or /play first!")
             await interaction.response.send_message(f"Volume changed to **{player.volume}%**")
 
+        @self.command(name="seek")
+        async def seek(interaction: discord.Interaction, seconds: typing.Optional[int], minutes: typing.Optional[int],
+                       hours: typing.Optional[int]):
+            player = node.get_player(interaction.guild_id)
+            if hours is None:
+                hours = 0
+            if minutes is None:
+                minutes = 0
+            if seconds is None:
+                seconds = 0
+            miliseconds = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000) + (seconds * 1000)
+            try:
+                # Spaghetti code
+                print(player.last_position)
+                await player.seek(miliseconds)
+                skipped_to = miliseconds
+                total_seconds = int(skipped_to / 1000)
+                calculated_seconds = total_seconds % 60
+                calculated_minutes = (total_seconds // 60) % 60
+                calculated_hours = total_seconds // 3600
+                if calculated_hours < 10:
+                    calculated_hours = f"0{calculated_hours}"
+                if calculated_minutes < 10:
+                    calculated_minutes = f"0{calculated_minutes}"
+                if calculated_seconds < 10:
+                    calculated_seconds = f"0{calculated_seconds}"
+                embed = discord.Embed(
+                    title="Seek",
+                    description=f"Skipped to: {calculated_hours}:{calculated_minutes}:{calculated_seconds}."
+                )
+            except AttributeError:
+                embed = discord.Embed(
+                    title="Not playing anything."
+                )
+            await interaction.response.send_message(embed=embed)
+
         async def connect_logic(interaction):
             try:
                 channel = interaction.user.voice.channel
@@ -123,7 +204,6 @@ class LCCommands(CommandTree):
                 return await interaction.response.send_message("No voice channel to connect to.")
 
             vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
-            await interaction.response.send_message(f"Joined voice channel {channel.name}")
             return vc
 
 
@@ -171,7 +251,7 @@ class LCBot(discord.Client):
         print(f"el usuario {interaction.user} ha ejecutado {interaction.data['name']}")
 
     # TODO Fix check_new_video
-    # @tasks.loop(minutes=5, reconnect=True)
+    # @tasks.loop(seconds=30)
     # async def check_new_video(self):
     #     video = SearchForNewVideo()
     #     link, title = video.check_new_video()
