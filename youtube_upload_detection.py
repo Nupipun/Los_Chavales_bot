@@ -1,11 +1,15 @@
 from googleapiclient.discovery import build
 import constants as c
 import shelve
+from dotenv import load_dotenv
+import os
 
 
 class SearchForNewVideo:
     def __init__(self):
-        self.youtube = build("youtube", "v3", developerKey=c.YOUTUBE_API_KEY)
+        load_dotenv()
+        YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+        self.youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
     def check_new_video(self):
         search_response = self.youtube.search().list(
@@ -18,7 +22,7 @@ class SearchForNewVideo:
         self.latest_video_id = self.load_latest_video_id()
         latest_video_id = search_response["items"][0]["id"]["videoId"]
         video_title = search_response["items"][0]["snippet"]["title"]
-        video_link = f"https://www.youtube.com/watch?v={latest_video_id}"
+        video_link = fr"https://www.youtube.com/watch?v={latest_video_id}"
 
         if latest_video_id != self.latest_video_id:
             self.latest_video_id = latest_video_id

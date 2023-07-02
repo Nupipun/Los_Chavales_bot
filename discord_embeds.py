@@ -1,6 +1,25 @@
 from discord import Embed
 
 
+def help_embed():
+    return Embed(
+        title="**Avaliable commands**",
+        description="**/ping** - _Pong!_\n"
+                    "**/help** - _Shows this message._\n"
+                    "**/queue** - _Shows the current queue._\n"
+                    "**/bump** - _Bumps a song to the top of the queue._\n"
+                    "**/play** - _Plays a song._\n"
+                    "**/skip** - _Skips the current song._\n"
+                    "**/stop** - _Stops playback._\n"
+                    "**/connect** - _Connects to a voicechat._\n"
+                    "**/disconnect** - _Disconnects from a voicechat._\n"
+                    "**/nowplaying** - _Shows the current song playing._\n"
+                    "**/pause** - _Pauses playback._\n"
+                    "**/resume** - _Resumes playback._\n"
+                    "**/volume** - _Changes the volume._\n"
+    )
+
+
 def not_connected_to_voicechat_embed():
     return Embed(
         title="Not connected to a voicechat."
