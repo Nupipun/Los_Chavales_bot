@@ -4,9 +4,14 @@ import logging
 from logging.handlers import RotatingFileHandler
 import colorlog
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger("discord")
 logger.setLevel(logging.DEBUG)
+
+TOKEN = os.getenv("TOKEN")
 
 file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s: %(message)s")
 
@@ -37,8 +42,6 @@ console_handler.setFormatter(console_formatter)
 
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
-
-TOKEN = "MTExMjkzMjgxNDQ2MDA0NzM2MA.GOSzVA.o_spK1IiNOkp--B4a1HSASMlyaSvOwHyTxwJaY"
 
 intents = discord.Intents.all()
 
