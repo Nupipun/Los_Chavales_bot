@@ -7,6 +7,7 @@ import wavelink
 from LCMusicEvents import LCMusicEvents
 from LCCommands import LCCommands
 from discord.ext import tasks
+from googleapiclient.errors import HttpError
 
 
 class LCBot(LCMusicEvents, discord.Client):
@@ -54,7 +55,11 @@ class LCBot(LCMusicEvents, discord.Client):
     @tasks.loop(minutes=1)
     async def check_new_video(self):
         video = SearchForNewVideo()
-        link, title = video.check_new_video()
+        try:
+            link, title = video.check_new_video()
+        except HttpError as e:
+            self.logger.error(e)
+            return
         if link != "null" and title != "null":
             self.logger.info("New video upload detected.")
             channel = await self.fetch_channel(c.YOUTUBE_FEED_CHANNEL_ID)

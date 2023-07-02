@@ -1,4 +1,5 @@
 from discord import Embed
+from wavelink import YouTubeTrack, YouTubePlaylist
 
 
 def help_embed():
@@ -65,11 +66,13 @@ def track_not_found_embed():
     )
 
 
-def now_playing_embed(track):
-    return Embed(
-        title="**Now playing**",
-        description=f"Track: {track}\nLink: {track.uri}"
-    )
+def now_playing_embed(track, queue):
+    if isinstance(track, YouTubeTrack):
+        description = f"Track: {track.title}\nLink: {track.uri}"
+    elif isinstance(track, YouTubePlaylist):
+        description = f"Track: {track.tracks[-queue - 1].title}\nLink: {track.tracks[-queue - 1].uri}"
+    embed = Embed(title="Now playing", description=description)
+    return embed
 
 
 def added_to_queue_embed(track):

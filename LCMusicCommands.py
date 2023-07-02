@@ -3,16 +3,23 @@ import discord
 import wavelink
 import typing
 import discord_embeds as embeds
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import re
+import constants as const
 
 
 class LCMusicCommands(CommandTree):
     def __init__(self, client):
         super().__init__(client)
         node = wavelink.NodePool.get_node()
+
         cola_link = []
         self.track = []
         self.channel = None
 
+        # TODO: Add clear parameter to clear the queue.
+        # TODO: Fix the queue command when it reaches 4096 characters.
         @self.command(name="queue")
         async def queue(interaction: discord.Interaction):
             player = node.get_player(interaction.guild_id)
@@ -24,17 +31,18 @@ class LCMusicCommands(CommandTree):
                     for _ in range(player.queue.count):
                         contador += 1
                         cola_str = player.queue.get()
-                        track_list.append(f"{'-' * 35}\n{contador}. Nombre: {cola_str}\n"
-                                          f"Link: {cola_link[_]}\n{'-' * 35}")
+                        track_list.append(f"`{contador}.` **[{cola_str}]({cola_link[_]})**")
                         player.queue.put(cola_str)
                 else:
                     track_list.append("No songs in the queue.")
                 track_list_str = "\n".join(track_list)
+                print(track_list_str)
             except AttributeError:
                 embed = embeds.embed_not_in_voice_channel()
             else:
                 embed = embeds.current_queue_embed(track_list_str)
             await interaction.response.send_message(embed=embed)
+            print(embed)
 
         @self.command(name="bump")
         async def bump(interaction: discord.Interaction, song_id: int):
@@ -67,6 +75,7 @@ class LCMusicCommands(CommandTree):
             player.queue.put_at_front(cola_str)
             await interaction.response.send_message(embed=embeds.bumped_song_embed(cola_str))
 
+        # TODO: Add spotify playlist support.
         @self.command(name="play")
         async def play(interaction: discord.Interaction, search: str):
             if len(client.voice_clients) == 0:
@@ -74,30 +83,81 @@ class LCMusicCommands(CommandTree):
             player = node.get_player(interaction.guild_id)
             player.autoplay = True
 
-            tracks = await wavelink.YouTubeTrack.search(search)
+            if is_spotify_link(search):
+                spotify_track_id = get_spotify_track_id(search, "track")
+                if spotify_track_id is None:
+                    await interaction.response.send_message(embed=embeds.track_not_found_embed())
+                    return
 
-            if not tracks:
-                await interaction.response.send_message(embed=embeds.track_not_found_embed())
-                return
+                track_name, artist_names = get_track_name_from_spotify(spotify_track_id, "track")
+                list_of_artists = ", ".join(artist_names)
+                search = f"{list_of_artists} {track_name}"
 
-            self.track = tracks[0]
-            if not player.is_playing():
-                await player.play(self.track)
-                embed = embeds.now_playing_embed(self.track)
+            if "&list=" in search:
+                playlist_id = search.split("&list=")[1]
+                self.track = await wavelink.YouTubePlaylist.search(playlist_id)
+                if not self.track:
+                    await interaction.response.send_message(embed=embeds.track_not_found_embed())
+                    return
+                add_all_tracks_to_queue(player, "playlist")
             else:
+                tracks = await wavelink.YouTubeTrack.search(search)
+                if not tracks:
+                    await interaction.response.send_message(embed=embeds.track_not_found_embed())
+                    return
+                self.track = tracks[0]
+                add_all_tracks_to_queue(player, "track")
+
+            if not player.is_playing():
+                await player.play(player.queue.get())
+                embed = embeds.now_playing_embed(self.track, player.queue.count)
+            await interaction.response.send_message(embed=embed)
+
+        def add_all_tracks_to_queue(player, query_type, tracks=None):
+            if query_type == "track":
                 player.queue.put(self.track)
                 cola_link.append(self.track.uri)
-                embed = embeds.added_to_queue_embed(self.track)
-            await interaction.response.send_message(embed=embed)
+            elif query_type == "playlist":
+                for track in self.track.tracks:
+                    player.queue.put(track)
+                    cola_link.append(track.uri)
+
+        def get_spotify_track_id(url: str, query: str) -> typing.Optional[str]:
+            """Returns the track ID from a Spotify track URL."""
+            if query == "track":
+                match = re.search(r"track\/(\w+)", url)
+            elif query == "playlist":
+                match = re.search(r"playlist\/(\w+)", url)
+            if match:
+                return match.group(1)
+            return None
+
+        def is_spotify_link(url: str) -> bool:
+            """Returns True if the URL is a Spotify URL."""
+            return url.startswith("https://open.spotify.com/")
+
+        def get_track_name_from_spotify(id: str, query_type: str) -> typing.Optional[str]:
+            """Returns the track name and artist name from a Spotify track ID."""
+            client_credentials_manager = SpotifyClientCredentials(client_id=const.SPOTIFY_CLIENT_ID,
+                                                                  client_secret=const.SPOTIFY_CLIENT_SECRET)
+            sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+            if query_type == "track":
+                track = sp.track(id)
+                track_name = track["name"]
+                artist_names = [artist["name"] for artist in track["artists"]]
+
+                return track_name, artist_names
 
         @self.command(name="nowplaying")
         async def nowplaying(interaction: discord.Interaction):
+            player = node.get_player(interaction.guild_id)
             try:
-                embed = embeds.now_playing_embed(self.track)
+                embed = embeds.now_playing_embed(self.track, player.queue.count)
             except AttributeError:
                 embed = embeds.tracks_not_playing_embed()
             await interaction.response.send_message(embed=embed)
 
+        # TODO: Add skip multiple tracks
         @self.command(name="skip")
         async def skip(interaction: discord.Interaction):
             player = node.get_player(interaction.guild_id)

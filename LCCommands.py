@@ -1,5 +1,6 @@
 from discord.app_commands import CommandTree
 from LCMusicCommands import LCMusicCommands
+from discord.app_commands import checks
 import discord_embeds as embeds
 import discord
 import typing
@@ -17,6 +18,7 @@ class LCCommands(LCMusicCommands, CommandTree):
         async def help(interaction: discord.Interaction):
             await interaction.response.send_message(embed=embeds.help_embed())
 
+        @checks.has_permissions(administrator=True)
         @self.command(name="announce")
         async def announce(interaction: discord.Interaction,
                            channel: discord.TextChannel,
@@ -31,3 +33,8 @@ class LCCommands(LCMusicCommands, CommandTree):
             await channel.send(everyone_msg, embed=embeds.announcement_embed(message, is_everyone),
                                allowed_mentions=allowed_mentions)
             await interaction.response.send_message("Announcement sent.", ephemeral=True)
+
+        # Error handling
+        @announce.error
+        async def announce_error(interaction: discord.Interaction, error):
+            await interaction.response.send_message(error, ephemeral=True)
