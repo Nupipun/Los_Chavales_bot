@@ -251,32 +251,35 @@ class LCCommands(CommandTree):
 
 
 class LCBot(discord.Client):
+    def __init__(self, logger, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = logger
+
     async def on_ready(self):
-        print(f"{self.user.name} is working.")
+        self.logger.info(f"Connected as {self.user.name}")
         try:
-            print("Starting wavelink...")
+            self.logger.info("Starting lavalink...")
             await self.start_lavalink()
             node: wavelink.Node = wavelink.Node(uri="http://localhost:2333", password="youshallnotpass")
             await wavelink.NodePool.connect(client=self, nodes=[node])
-            print("Syncing commands...")
+            self.logger.info("Syncing commands...")
             tree = LCCommands(self)
             synced = await tree.sync()
-            print(f"Synced {len(synced)} command(s)")
+            self.logger.info(f"Synced {len(synced)} command(s)")
             # await self.check_new_video.start()
         except Exception as e:
-            print(e)
+            self.logger.error(e)
 
     @staticmethod
     async def start_lavalink():
-        with open("lavalink/lavalink_logs.txt", "w") as log_file:
+        with open("logs/lavalink_logs.log", "a") as log_file:
             process = await asyncio.create_subprocess_exec(
                 "java", "-jar", "Lavalink.jar", cwd="lavalink",
                 stdout=log_file, stderr=log_file
             )
 
-    @staticmethod
-    async def on_wavelink_node_ready(node):
-        print(f"wavelink node ready. id: {node.id}")
+    async def on_wavelink_node_ready(self, node):
+        self.logger.info(f"Wavelink node ready. ID: '{node.id}'")
 
     async def on_member_join(self, member: discord.Member):
         channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
@@ -292,9 +295,13 @@ class LCBot(discord.Client):
 
         await channel.send(msg, file=file)
 
-    @staticmethod
-    async def on_interaction(interaction: discord.Interaction):
-        print(f"el usuario {interaction.user} ha ejecutado {interaction.data['name']}")
+    async def on_interaction(self, interaction: discord.Interaction):
+        option_list = {}
+        if "options" in interaction.data:
+            for option in interaction.data["options"]:
+                option_list[option["name"]] = option["value"]
+        option_str = ", ".join([f"{key}: {value}" for key, value in option_list.items()])
+        self.logger.info(f"User: {interaction.user} executed: {interaction.data['name']} args: [{option_str}]")
 
     # TODO Fix check_new_video
     # @tasks.loop(seconds=30)
