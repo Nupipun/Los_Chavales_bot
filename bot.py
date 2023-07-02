@@ -1,5 +1,5 @@
+import asyncio
 import typing
-
 from discord.app_commands import CommandTree
 from constants import *
 import discord
@@ -8,10 +8,6 @@ from io import BytesIO
 from youtube_upload_detection import SearchForNewVideo
 from discord.ext import tasks
 import wavelink
-import subprocess
-import time
-from threading import Thread
-import os
 
 
 class LCCommands(CommandTree):
@@ -32,9 +28,11 @@ class LCCommands(CommandTree):
             track_list = []
             try:
                 if player.queue.count != 0:
+                    contador = 0
                     for _ in range(player.queue.count):
+                        contador += 1
                         cola_str = player.queue.get()
-                        track_list.append(f"{'-' * 35}\nNombre: {cola_str}\nLink: {cola_link[_]}\n{'-' * 35}")
+                        track_list.append(f"{'-' * 35}\n{contador}. Nombre: {cola_str}\nLink: {cola_link[_]}\n{'-' * 35}")
                         player.queue.put(cola_str)
                 else:
                     track_list.append("No songs in the queue.")
@@ -50,6 +48,50 @@ class LCCommands(CommandTree):
                 )
             await interaction.response.send_message(embed=embed)
 
+        @self.command(name="bump")
+        async def bump(interaction: discord.Interaction, song_id: int):
+            player = node.get_player(interaction.guild_id)
+            try:
+                await player.set_volume(player.volume)
+            except AttributeError:
+                embed = discord.Embed(
+                    title="Not in a voicechannel."
+                )
+                await interaction.response.send_message(embed=embed)
+
+            cola_str = None
+
+            if song_id < 1 or song_id > player.queue.count:
+                embed = discord.Embed(
+                    title="The song id you inputted is not within the range of the queue."
+                )
+                await interaction.response.send_message(embed=embed)
+                return
+
+            if player.queue.count == 0:
+                embed = discord.Embed(
+                    title="No songs in the queue."
+                )
+                await interaction.response.send_message(embed=embed)
+                return
+
+            contador = 0
+            for _ in range(song_id):
+                contador += 1
+                if contador == song_id:
+                    cola_str = player.queue.get()
+                    break
+                else:
+                    cola_str = player.queue.get()
+                    player.queue.put(cola_str)
+
+            player.queue.put_at_front(cola_str)
+            embed = discord.Embed(
+                title="Bump",
+                description=f'Bumped **"{cola_str.title}"** to the top of the queue.'
+            )
+            await interaction.response.send_message(embed=embed)
+
         @self.command(name="play")
         async def play(interaction: discord.Interaction, search: str):
             player = node.get_player(interaction.guild_id)
@@ -61,6 +103,7 @@ class LCCommands(CommandTree):
                 player.autoplay = True
 
             tracks = await wavelink.YouTubeTrack.search(search)
+
             if not tracks:
                 embed = discord.Embed(
                     title="This track was not found"
@@ -140,9 +183,12 @@ class LCCommands(CommandTree):
         @self.command(name="disconnect")
         async def connect(interaction: discord.Interaction):
             player = node.get_player(interaction.guild.id)
+
             for _ in range(player.queue.count):
                 player.queue.pop()
+
             await player.stop()
+
             for x in client.voice_clients:
                 await interaction.response.send_message("Disconnecting from the channel...")
                 return await x.disconnect()
@@ -157,36 +203,33 @@ class LCCommands(CommandTree):
             player = node.get_player(interaction.guild_id)
             try:
                 await player.set_volume(volume_number)
+
             except AttributeError:
                 await interaction.response.send_message(f"Please use /connect or /play first!")
+
             await interaction.response.send_message(f"Volume changed to **{player.volume}%**")
 
         @self.command(name="seek")
-        async def seek(interaction: discord.Interaction, seconds: typing.Optional[int], minutes: typing.Optional[int],
-                       hours: typing.Optional[int]):
+        async def seek(
+                interaction: discord.Interaction,
+                seconds: typing.Optional[int] = 0,
+                minutes: typing.Optional[int] = 0,
+                hours: typing.Optional[int] = 0
+        ):
             player = node.get_player(interaction.guild_id)
-            if hours is None:
-                hours = 0
-            if minutes is None:
-                minutes = 0
-            if seconds is None:
-                seconds = 0
             miliseconds = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000) + (seconds * 1000)
             try:
                 # Spaghetti code
-                print(player.last_position)
                 await player.seek(miliseconds)
-                skipped_to = miliseconds
-                total_seconds = int(skipped_to / 1000)
+
+                total_seconds = int(miliseconds / 1000)
                 calculated_seconds = total_seconds % 60
                 calculated_minutes = (total_seconds // 60) % 60
                 calculated_hours = total_seconds // 3600
-                if calculated_hours < 10:
-                    calculated_hours = f"0{calculated_hours}"
-                if calculated_minutes < 10:
-                    calculated_minutes = f"0{calculated_minutes}"
-                if calculated_seconds < 10:
-                    calculated_seconds = f"0{calculated_seconds}"
+                calculated_hours = f"0{calculated_hours}" if calculated_hours < 10 else str(calculated_hours)
+                calculated_minutes = f"0{calculated_minutes}" if calculated_minutes < 10 else str(calculated_minutes)
+                calculated_seconds = f"0{calculated_seconds}" if calculated_seconds < 10 else str(calculated_seconds)
+
                 embed = discord.Embed(
                     title="Seek",
                     description=f"Skipped to: {calculated_hours}:{calculated_minutes}:{calculated_seconds}."
@@ -212,9 +255,7 @@ class LCBot(discord.Client):
         print(f"{self.user.name} is working.")
         try:
             print("Starting wavelink...")
-            t1 = Thread(self.start_lavalink())
-            t1.start()
-            time.sleep(4)
+            await self.start_lavalink()
             node: wavelink.Node = wavelink.Node(uri="http://localhost:2333", password="youshallnotpass")
             await wavelink.NodePool.connect(client=self, nodes=[node])
             print("Syncing commands...")
@@ -226,11 +267,15 @@ class LCBot(discord.Client):
             print(e)
 
     @staticmethod
-    def start_lavalink():
-        os.chdir("lavalink")
-        subprocess.Popen(["java", "-jar", "Lavalink.jar"], creationflags=subprocess.CREATE_NEW_CONSOLE)
+    async def start_lavalink():
+        with open("lavalink/lavalink_logs.txt", "w") as log_file:
+            process = await asyncio.create_subprocess_exec(
+                "java", "-jar", "Lavalink.jar", cwd="lavalink",
+                stdout=log_file, stderr=log_file
+            )
 
-    async def on_wavelink_node_ready(self, node):
+    @staticmethod
+    async def on_wavelink_node_ready(node):
         print(f"wavelink node ready. id: {node.id}")
 
     async def on_member_join(self, member: discord.Member):
@@ -247,7 +292,8 @@ class LCBot(discord.Client):
 
         await channel.send(msg, file=file)
 
-    async def on_interaction(self, interaction: discord.Interaction):
+    @staticmethod
+    async def on_interaction(interaction: discord.Interaction):
         print(f"el usuario {interaction.user} ha ejecutado {interaction.data['name']}")
 
     # TODO Fix check_new_video
