@@ -4,14 +4,10 @@ import logging
 from logging.handlers import RotatingFileHandler
 import colorlog
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+import constants as c
 
 logger = logging.getLogger("discord")
 logger.setLevel(logging.DEBUG)
-
-TOKEN = os.getenv("TOKEN")
 
 file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s: %(message)s")
 
@@ -46,4 +42,4 @@ logger.addHandler(console_handler)
 intents = discord.Intents.all()
 
 client = LCBot(logger, intents=intents)
-client.run(TOKEN, log_handler=None)
+client.run(c.TOKEN, log_handler=None)

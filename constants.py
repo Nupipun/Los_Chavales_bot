@@ -1,3 +1,10 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TOKEN = os.getenv("TOKEN")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 # WELCOME_CHANNEL_ID = 1119197039553675295
 WELCOME_CHANNEL_ID = 1113466074797703198
 YOUTUBE_CHANNEL_ID = "UCvH7CJqcP5mW411eAE8KqZQ"
