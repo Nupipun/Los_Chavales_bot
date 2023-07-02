@@ -1,6 +1,7 @@
 from googleapiclient.discovery import build
 import constants as c
 import shelve
+import os
 
 
 class SearchForNewVideo:
@@ -31,14 +32,17 @@ class SearchForNewVideo:
     def load_latest_video_id(self):
         try:
             with shelve.open("shelve/latest_video_id") as data:
-                print(data["latest_video_id"])
                 return data["latest_video_id"]
         except FileNotFoundError:
             return ""
 
     def save_latest_video_id(self):
-        with shelve.open("shelve/latest_video_id") as data:
-            data["latest_video_id"] = self.latest_video_id
+        try:
+            with shelve.open("shelve/latest_video_id") as data:
+                data["latest_video_id"] = self.latest_video_id
+        except FileNotFoundError:
+            os.mkdir("shelve")
+            self.save_latest_video_id()
 
 
 if __name__ == "__main__":
