@@ -1,8 +1,9 @@
 import discord
-from bot import LCBot
+from LCBot import LCBot
 import logging
 from logging.handlers import RotatingFileHandler
 import colorlog
+import os
 
 logger = logging.getLogger("discord")
 logger.setLevel(logging.DEBUG)
@@ -21,9 +22,13 @@ console_formatter = colorlog.ColoredFormatter(
     reset=True,
     style="%"
 )
-
-file_handler = RotatingFileHandler(filename="logs/logs.log", encoding="utf-8", mode="a", maxBytes=20 * 1024 * 1024,
-                                   backupCount=5)
+try:
+    file_handler = RotatingFileHandler(filename="logs/logs.log", encoding="utf-8", mode="a", maxBytes=20 * 1024 * 1024,
+                                       backupCount=5)
+except FileNotFoundError:
+    os.mkdir("logs")
+    file_handler = RotatingFileHandler(filename="logs/logs.log", encoding="utf-8", mode="a", maxBytes=20 * 1024 * 1024,
+                                       backupCount=5)
 file_handler.setFormatter(file_formatter)
 
 console_handler = logging.StreamHandler()
