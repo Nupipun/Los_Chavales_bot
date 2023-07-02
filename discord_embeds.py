@@ -20,6 +20,13 @@ def help_embed():
     )
 
 
+def announcement_embed(message, is_everyone: bool = False):
+    return Embed(
+        title="Announcement",
+        description=f"{message}",
+    )
+
+
 def not_connected_to_voicechat_embed():
     return Embed(
         title="Not connected to a voicechat."
