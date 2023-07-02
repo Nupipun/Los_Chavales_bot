@@ -1,12 +1,13 @@
 import asyncio
 import typing
 from discord.app_commands import CommandTree
-from constants import *
+import constants as c
 import discord
+# from discord import ClientException
 from card_image_logic import create_welcome_card
 from io import BytesIO
-from youtube_upload_detection import SearchForNewVideo
-from discord.ext import tasks
+# from youtube_upload_detection import SearchForNewVideo
+# from discord.ext import tasks
 import wavelink
 
 
@@ -16,6 +17,7 @@ class LCCommands(CommandTree):
         node = wavelink.NodePool.get_node()
         cola_link = []
         self.track = []
+        self.channel = None
 
         @self.command(name="ping")
         async def ping(interaction: discord.Interaction):
@@ -32,7 +34,8 @@ class LCCommands(CommandTree):
                     for _ in range(player.queue.count):
                         contador += 1
                         cola_str = player.queue.get()
-                        track_list.append(f"{'-' * 35}\n{contador}. Nombre: {cola_str}\nLink: {cola_link[_]}\n{'-' * 35}")
+                        track_list.append(f"{'-' * 35}\n{contador}. Nombre: {cola_str}\n"
+                                          f"Link: {cola_link[_]}\n{'-' * 35}")
                         player.queue.put(cola_str)
                 else:
                     track_list.append("No songs in the queue.")
@@ -97,7 +100,8 @@ class LCCommands(CommandTree):
             player = node.get_player(interaction.guild_id)
             try:
                 player.autoplay = True
-            except AttributeError:
+            except AttributeError as e:
+                print(e)
                 await connect_logic(interaction)
                 player = node.get_player(interaction.guild_id)
                 player.autoplay = True
@@ -138,7 +142,7 @@ class LCCommands(CommandTree):
             except AttributeError:
                 embed = discord.Embed(
                     title="**Now playing**",
-                    description=f"There are no tracks playing right now."
+                    description="There are no tracks playing right now."
                 )
             await interaction.response.send_message(embed=embed)
 
@@ -171,17 +175,27 @@ class LCCommands(CommandTree):
 
         @self.command(name="connect")
         async def connect(interaction: discord.Interaction):
+            actual_channel = interaction.user.voice.channel
             try:
-                channel = interaction.user.voice.channel
+                if self.channel != actual_channel:
+                    for x in client.voice_clients:
+                        await x.disconnect()
+                    self.channel = actual_channel
+                    try:
+                        self.channel.connect()
+                    except RuntimeWarning:
+                        pass
+                else:
+                    return await interaction.response.send_message("Already connected to a voice channel.")
             except AttributeError:
                 return await interaction.response.send_message("No voice channel to connect to.")
 
-            await interaction.response.send_message(f"Connected to channel **{channel.name}**")
-            vc: wavelink.Player = await channel.connect(cls=wavelink.Player)
+            await interaction.response.send_message(f"Connected to channel **{self.channel.name}**")
+            vc: wavelink.Player = await self.channel.connect(cls=wavelink.Player)
             return vc
 
         @self.command(name="disconnect")
-        async def connect(interaction: discord.Interaction):
+        async def disconnect(interaction: discord.Interaction):
             player = node.get_player(interaction.guild.id)
 
             for _ in range(player.queue.count):
@@ -205,7 +219,7 @@ class LCCommands(CommandTree):
                 await player.set_volume(volume_number)
 
             except AttributeError:
-                await interaction.response.send_message(f"Please use /connect or /play first!")
+                await interaction.response.send_message("Please use /connect or /play first!")
 
             await interaction.response.send_message(f"Volume changed to **{player.volume}%**")
 
@@ -273,7 +287,7 @@ class LCBot(discord.Client):
     @staticmethod
     async def start_lavalink():
         with open("logs/lavalink_logs.log", "a") as log_file:
-            process = await asyncio.create_subprocess_exec(
+            await asyncio.create_subprocess_exec(
                 "java", "-jar", "Lavalink.jar", cwd="lavalink",
                 stdout=log_file, stderr=log_file
             )
@@ -282,7 +296,7 @@ class LCBot(discord.Client):
         self.logger.info(f"Wavelink node ready. ID: '{node.id}'")
 
     async def on_member_join(self, member: discord.Member):
-        channel = await self.fetch_channel(WELCOME_CHANNEL_ID)
+        channel = await self.fetch_channel(c.WELCOME_CHANNEL_ID)
         user_id = member.id
 
         user = await self.fetch_user(user_id)

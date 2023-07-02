@@ -1,15 +1,15 @@
 from googleapiclient.discovery import build
-from constants import *
+import constants as c
 import shelve
 
 
 class SearchForNewVideo:
     def __init__(self):
-        self.youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
+        self.youtube = build("youtube", "v3", developerKey=c.YOUTUBE_API_KEY)
 
     def check_new_video(self):
         search_response = self.youtube.search().list(
-            channelId=YOUTUBE_CHANNEL_ID,
+            channelId=c.YOUTUBE_CHANNEL_ID,
             part="id,snippet",
             order="date",
             type="video"
