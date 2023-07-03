@@ -23,7 +23,6 @@ class LCBot(LCMusicEvents, discord.Client):
             tree = LCCommands(self)
             synced = await tree.sync()
             self.logger.info(f"Synced {len(synced)} command(s)")
-            # self.check_new_video.start()
         except Exception as e:
             self.logger.error(e)
 
