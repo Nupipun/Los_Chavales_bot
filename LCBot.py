@@ -2,12 +2,9 @@ import constants as c
 import discord
 from card_image_logic import create_welcome_card
 from io import BytesIO
-from youtube_upload_detection import SearchForNewVideo
 import wavelink
 from LCMusicEvents import LCMusicEvents
 from LCCommands import LCCommands
-from discord.ext import tasks
-from googleapiclient.errors import HttpError
 
 
 class LCBot(LCMusicEvents, discord.Client):
@@ -26,7 +23,7 @@ class LCBot(LCMusicEvents, discord.Client):
             tree = LCCommands(self)
             synced = await tree.sync()
             self.logger.info(f"Synced {len(synced)} command(s)")
-            self.check_new_video.start()
+            # self.check_new_video.start()
         except Exception as e:
             self.logger.error(e)
 
@@ -51,18 +48,3 @@ class LCBot(LCMusicEvents, discord.Client):
                 option_list[option["name"]] = option["value"]
         option_str = ", ".join([f"{key}: {value}" for key, value in option_list.items()])
         self.logger.info(f"User: {interaction.user} executed: {interaction.data['name']} args: [{option_str}]")
-
-    @tasks.loop(minutes=1)
-    async def check_new_video(self):
-        video = SearchForNewVideo()
-        try:
-            link, title = video.check_new_video()
-        except HttpError as e:
-            self.logger.error(e)
-            return
-        if link != "null" and title != "null":
-            self.logger.info("New video upload detected.")
-            channel = await self.fetch_channel(c.YOUTUBE_FEED_CHANNEL_ID)
-            await channel.send(f"New video uploaded on the channel!\n{title}\n{link}")
-        else:
-            self.logger.debug("No new video upload detected.")
