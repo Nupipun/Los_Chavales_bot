@@ -19,8 +19,8 @@ class LCCommands(LCDuroCommands, LCMusicCommands, CommandTree):
             await interaction.response.send_message("Pong!")
 
         @self.command(name="help")
-        async def help(interaction: discord.Interaction):
-            await interaction.response.send_message(embed=embeds.help_embed())
+        async def help(interaction: discord.Interaction, option: typing.Optional[str] = "general"):
+            await interaction.response.send_message(embed=embeds.help_embed(option), ephemeral=True)
 
         # ADMINISTRATOR COMMANDS
         @checks.has_permissions(administrator=True)
@@ -28,14 +28,10 @@ class LCCommands(LCDuroCommands, LCMusicCommands, CommandTree):
         async def announce(interaction: discord.Interaction,
                            channel: discord.TextChannel,
                            message: str,
-                           is_everyone: typing.Optional[bool] = False):
-            if is_everyone:
-                everyone_msg = "@everyone\n\n"
-            else:
-                everyone_msg = ""
+                           everyone: typing.Optional[bool] = False):
 
-            allowed_mentions = discord.AllowedMentions(everyone=is_everyone)
-            await channel.send(everyone_msg, embed=embeds.announcement_embed(message, is_everyone),
+            allowed_mentions = discord.AllowedMentions(everyone=everyone)
+            await channel.send("@everyone" if everyone else "", embed=embeds.announcement_embed(message, everyone),
                                allowed_mentions=allowed_mentions)
             await interaction.response.send_message("Announcement sent.", ephemeral=True)
 

@@ -2,23 +2,43 @@ from discord import Embed
 from wavelink import YouTubeTrack, YouTubePlaylist
 
 
-def help_embed():
-    return Embed(
-        title="**Avaliable commands**",
-        description="**/ping** - _Pong!_\n"
-                    "**/help** - _Shows this message._\n"
-                    "**/queue** - _Shows the current queue._\n"
-                    "**/bump** - _Bumps a song to the top of the queue._\n"
-                    "**/play** - _Plays a song._\n"
-                    "**/skip** - _Skips the current song._\n"
-                    "**/stop** - _Stops playback._\n"
-                    "**/connect** - _Connects to a voicechat._\n"
-                    "**/disconnect** - _Disconnects from a voicechat._\n"
-                    "**/nowplaying** - _Shows the current song playing._\n"
-                    "**/pause** - _Pauses playback._\n"
-                    "**/resume** - _Resumes playback._\n"
-                    "**/volume** - _Changes the volume._\n"
-    )
+def help_embed(choice):
+    if choice == "general":
+        description = ("**GENERAL COMMANDS**\n"
+                       "**/ping** - _Pong!_\n"
+                       "**/help** - _Shows this message._\n\n")
+    elif choice == "music":
+        description = ("**MUSIC COMMANDS**\n"
+                       "**/queue** - _Shows the current queue._\n"
+                       "**/bump** - _Bumps a song to the top of the queue._\n"
+                       "**/play** - _Plays a song._\n"
+                       "**/skip** - _Skips the current song._\n"
+                       "**/stop** - _Stops playback._\n"
+                       "**/connect** - _Connects to a voicechat._\n"
+                       "**/disconnect** - _Disconnects from a voicechat._\n"
+                       "**/nowplaying** - _Shows the current song playing._\n"
+                       "**/pause** - _Pauses playback._\n"
+                       "**/resume** - _Resumes playback._\n"
+                       "**/volume** - _Changes the volume._\n")
+    elif choice == "admin":
+        description = ("**ADMINISTRATOR COMMANDS**\n"
+                       "**/announce** - _Announces a message in a channel._\n"
+                       "**/vidcheck** - _Checks for new video uploads._\n")
+    elif choice == "durobot":
+        description = ("**DUROBOT COMMANDS**\n"
+                       "**/durosave** - _Saves a new image in the duro database._\n"
+                       "**/duro** - _Sends a random image from the duro database._\n"
+                       "**/gatosave** - _Saves a new image in the gato database._\n"
+                       "**/gato** - _Sends a random image from the gato database._\n"
+                       "**/borzoisave** - _Saves a new image in the borzoi database._\n"
+                       "**/borzoi** - _Sends a random image from the borzoi database._\n"
+                       "**/lmaosave** - _Saves a new image in the lmao database._\n"
+                       "**/lmao** - _Sends a random image from the lmao database._\n"
+                       )
+    else:
+        description = "**Choose a valid option (general, music, admin, durobot).**"
+
+    return Embed(title="**Avaliable commands**", description=description)
 
 
 def announcement_embed(message, is_everyone: bool = False):
@@ -79,6 +99,12 @@ def added_to_queue_embed(track):
     return Embed(
         title="**Added to queue**",
         description=f"Track: {track}\nLink: {track.uri}"
+    )
+
+
+def not_enough_tracks_in_queue_embed():
+    return Embed(
+        title="There are not enough tracks in the queue."
     )
 
 
