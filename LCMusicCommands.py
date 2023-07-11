@@ -7,6 +7,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import re
 import constants as const
+import asyncio
 
 
 class LCMusicCommands(CommandTree):
@@ -19,12 +20,13 @@ class LCMusicCommands(CommandTree):
         self.channel = None
 
         # TODO Add clear parameter to clear the queue.
-        # TODO Fix the queue command when it reaches 4096 characters.
         @self.command(name="queue")
         async def queue(interaction: discord.Interaction):
+            await interaction.response.defer()
             player = node.get_player(interaction.guild_id)
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
+
             track_list = []
             if player.queue.count != 0:
                 contador = 0
@@ -34,10 +36,62 @@ class LCMusicCommands(CommandTree):
                     track_list.append(f"`{contador}.` **[{cola_str}]({cola_link[_]})**")
                     player.queue.put(cola_str)
             else:
-                track_list.append("No songs in the queue.")
-            track_list_str = "\n".join(track_list)
-            embed = embeds.current_queue_embed(track_list_str)
-            await interaction.response.send_message(embed=embed)
+                embed = discord.Embed(title="Error", description="No songs in the queue.")
+                return await interaction.followup.send(embed=embed)
+
+            # track_list_str = "\n".join(track_list)
+            paginated_track_list = [track_list[i:i + 10] for i in range(0, len(track_list), 10)]
+
+            pages = len(paginated_track_list)
+            current_page = 1
+            embed = discord.Embed(
+                title="Queue",
+                description=f"Page {current_page}/{pages}")
+
+            for track in paginated_track_list[current_page - 1]:
+                embed.add_field(name="", value=track, inline=False)
+
+            await interaction.followup.send(embed=embed)
+
+            canal = interaction.channel_id
+            message_history = client.get_channel(canal).history(limit=1)
+            message = message_history.ag_frame.f_locals.get('self').last_message
+
+            await message.add_reaction('⬅️')
+            await message.add_reaction('➡️')
+
+            def check(reaction, user):
+                return user == interaction.user and str(reaction.emoji) in ["⬅️", "➡️"]
+
+            while True:
+                try:
+                    reaction, user = await client.wait_for("reaction_add", timeout=60, check=check)
+                    if str(reaction.emoji) == "➡️" and current_page != pages:
+                        current_page += 1
+                        embed = discord.Embed(
+                            title="Queue",
+                            description=f"Page {current_page}/{pages}")
+
+                        for track in paginated_track_list[current_page - 1]:
+                            embed.add_field(name="", value=track, inline=False)
+
+                        await message.edit(embed=embed)
+                        await message.remove_reaction(reaction, user)
+                    elif str(reaction.emoji) == "⬅️" and current_page > 1:
+                        current_page -= 1
+                        embed = discord.Embed(
+                            title="Queue",
+                            description=f"Page {current_page}/{pages}")
+
+                        for track in paginated_track_list[current_page - 1]:
+                            embed.add_field(name="", value=track, inline=False)
+                        await message.edit(embed=embed)
+                        await message.remove_reaction(reaction, user)
+                    else:
+                        await message.remove_reaction(reaction, user)
+                except asyncio.TimeoutError:
+                    await message.delete()
+                    break
 
         # TODO Fix bump messing up with the queue.
         @self.command(name="bump")
@@ -74,6 +128,7 @@ class LCMusicCommands(CommandTree):
         # TODO Add spotify playlist support.
         @self.command(name="play")
         async def play(interaction: discord.Interaction, search: str):
+            await interaction.response.defer()
             if len(client.voice_clients) == 0:
                 await connect_logic(interaction)
             player = node.get_player(interaction.guild_id)
@@ -83,7 +138,7 @@ class LCMusicCommands(CommandTree):
                 spotify_track_id = get_spotify_track_id(search, "track")
 
                 if spotify_track_id is None:
-                    return await interaction.response.send_message(embed=embeds.track_not_found_embed())
+                    return await interaction.followup.send(embed=embeds.track_not_found_embed())
                 track_name, artist_names = get_track_name_from_spotify(spotify_track_id, "track")
                 list_of_artists = ", ".join(artist_names)
                 search = f"{list_of_artists} {track_name}"
@@ -93,13 +148,13 @@ class LCMusicCommands(CommandTree):
                 self.track = await wavelink.YouTubePlaylist.search(playlist_id)
 
                 if not self.track:
-                    return await interaction.response.send_message(embed=embeds.track_not_found_embed())
+                    return await interaction.followup.send(embed=embeds.track_not_found_embed())
                 add_all_tracks_to_queue(player, "playlist")
             else:
                 tracks = await wavelink.YouTubeTrack.search(search)
 
                 if not tracks:
-                    return await interaction.response.send_message(embed=embeds.track_not_found_embed())
+                    return await interaction.followup.send(embed=embeds.track_not_found_embed())
                 self.track = tracks[0]
                 add_all_tracks_to_queue(player, "track")
                 embed = embeds.added_to_queue_embed(self.track)
@@ -107,7 +162,7 @@ class LCMusicCommands(CommandTree):
             if not player.is_playing():
                 await player.play(player.queue.get())
                 embed = embeds.now_playing_embed(self.track, player.queue.count)
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
 
         def add_all_tracks_to_queue(player, query_type, tracks=None):
             if query_type == "track":
