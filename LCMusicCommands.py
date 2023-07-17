@@ -96,34 +96,35 @@ class LCMusicCommands(CommandTree):
         # TODO Fix bump messing up with the queue.
         @self.command(name="bump")
         async def bump(interaction: discord.Interaction, song_id: int):
-            player = node.get_player(interaction.guild_id)
-            try:
-                await player.set_volume(player.volume)
-            except AttributeError:
-                await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
+            await interaction.response.send_message("This command is currently disabled.", ephemeral=True)
+            # player = node.get_player(interaction.guild_id)
+            # try:
+            #     await player.set_volume(player.volume)
+            # except AttributeError:
+            #     await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
 
-            cola_str = None
+            # cola_str = None
 
-            if song_id < 1 or song_id > player.queue.count:
-                await interaction.response.send_message(embed=embeds.song_id_not_within_range_embed())
-                return
+            # if song_id < 1 or song_id > player.queue.count:
+            #     await interaction.response.send_message(embed=embeds.song_id_not_within_range_embed())
+            #     return
 
-            if player.queue.count == 0:
-                await interaction.response.send_message(embed=embeds.no_songs_in_queue_embed())
-                return
+            # if player.queue.count == 0:
+            #     await interaction.response.send_message(embed=embeds.no_songs_in_queue_embed())
+            #     return
 
-            contador = 0
-            for _ in range(song_id):
-                contador += 1
-                if contador == song_id:
-                    cola_str = player.queue.get()
-                    break
-                else:
-                    cola_str = player.queue.get()
-                    player.queue.put(cola_str)
+            # contador = 0
+            # for _ in range(song_id):
+            #     contador += 1
+            #     if contador == song_id:
+            #         cola_str = player.queue.get()
+            #         break
+            #     else:
+            #         cola_str = player.queue.get()
+            #         player.queue.put(cola_str)
 
-            player.queue.put_at_front(cola_str)
-            await interaction.response.send_message(embed=embeds.bumped_song_embed(cola_str))
+            # player.queue.put_at_front(cola_str)
+            # await interaction.response.send_message(embed=embeds.bumped_song_embed(cola_str))
 
         # TODO Add spotify playlist support.
         @self.command(name="play")
@@ -135,6 +136,10 @@ class LCMusicCommands(CommandTree):
             player.autoplay = True
 
             if is_spotify_link(search):
+                if "https://open.spotify.com/playlist/" in search:
+                    return await interaction.followup.send("Spotify playlist support is currently disabled.",
+                                                           ephemeral=True)
+
                 spotify_track_id = get_spotify_track_id(search, "track")
 
                 if spotify_track_id is None:
