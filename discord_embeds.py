@@ -10,8 +10,8 @@ def help_embed(choice):
     elif choice == "music":
         description = ("**MUSIC COMMANDS**\n"
                        "**/queue** - _Shows the current queue._\n"
-                       "**/bump** - _Bumps a song to the top of the queue._\n"
-                       "**/play** - _Plays a song._\n"
+                       "**/bump** - _Bumps a song to the top of the queue (currently unsupported)_\n"
+                       "**/play** - _Plays a song. (spotify playlist currently unsupported)_\n"
                        "**/skip** - _Skips the current song._\n"
                        "**/stop** - _Stops playback._\n"
                        "**/connect** - _Connects to a voicechat._\n"

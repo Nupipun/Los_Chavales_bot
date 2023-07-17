@@ -3,8 +3,8 @@ import discord
 from card_image_logic import create_welcome_card
 from io import BytesIO
 import wavelink
-from LCMusicEvents import LCMusicEvents
-from LCCommands import LCCommands
+from TRHMusicEvents import LCMusicEvents
+from TRH import LCCommands
 
 
 class LCBot(LCMusicEvents, discord.Client):
@@ -17,7 +17,7 @@ class LCBot(LCMusicEvents, discord.Client):
         try:
             self.logger.info("Starting lavalink...")
             await self.start_lavalink()
-            node: wavelink.Node = wavelink.Node(uri="http://localhost:2333", password="youshallnotpass")
+            node: wavelink.Node = wavelink.Node(uri=c.WAVELINK_URI, password=c.WAVELINK_PASS)
             await wavelink.NodePool.connect(client=self, nodes=[node])
             self.logger.info("Syncing commands...")
             tree = LCCommands(self)
@@ -36,7 +36,7 @@ class LCBot(LCMusicEvents, discord.Client):
         card = create_welcome_card(user, avatar_data)
 
         file = discord.File(card, filename="welcome_card.png")
-        msg = f"Hello {member} welcome to Los Chavales!\n\nHola {member} bienvenido a Los Chavales!"
+        msg = f"Hello {member} welcome to {c.SERVER_NAME}\n\nHola {member} bienvenido a {c.SERVER_NAME}!"
 
         await channel.send(msg, file=file)
 

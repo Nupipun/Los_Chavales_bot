@@ -1,5 +1,6 @@
 from discord.app_commands import CommandTree
 from discord import Interaction, Attachment, File
+import constants as c
 import os
 import random
 
@@ -14,20 +15,18 @@ class LCDuroCommands(CommandTree):
 
         @self.command(name="durosave")
         async def durosave(interaction: Interaction, imagen: Attachment):
-            path = os.path.join("images", "duro_images")
-            if not os.path.exists(path):
-                os.mkdir(path)
+            if not os.path.exists(c.DURO_IMG_PATH):
+                os.mkdir(c.DURO_IMG_PATH)
 
-            await imagen.save(os.path.join(path, imagen.filename))
+            await imagen.save(os.path.join(c.DURO_IMG_PATH, imagen.filename))
             await interaction.response.send_message("Imagen dura guardada.", ephemeral=True)
 
         @self.command(name="gatosave")
         async def gatosave(interaction: Interaction, imagen: Attachment):
-            path = os.path.join("images", "gato_images")
-            if not os.path.exists(path):
-                os.mkdir(path)
+            if not os.path.exists(c.GATO_IMG_PATH):
+                os.mkdir(c.GATO_IMG_PATH)
 
-            await imagen.save(os.path.join(path, imagen.filename))
+            await imagen.save(os.path.join(c.GATO_IMG_PATH, imagen.filename))
             await interaction.response.send_message("Imagen MEOW guardada.", ephemeral=True)
 
         @self.command(name="duro")
@@ -50,10 +49,9 @@ class LCDuroCommands(CommandTree):
 
         @self.command(name="borzoisave")
         async def borzoisave(interaction: Interaction, imagen: Attachment):
-            path = os.path.join("images", "borzoi_images")
-            if not os.path.exists(path):
-                os.mkdir(path)
-            await imagen.save(path, imagen.filename)
+            if not os.path.exists(c.BORZOI_IMG_PATH):
+                os.mkdir(c.BORZOI_IMG_PATH)
+            await imagen.save(c.BORZOI_IMG_PATH, imagen.filename)
             await interaction.response.send_message("Imagen de borzoi guardada.", ephemeral=True)
 
         @self.command(name="borzoi")
@@ -67,10 +65,9 @@ class LCDuroCommands(CommandTree):
 
         @self.command(name="lmaosave")
         async def lmaosave(interaction: Interaction, imagen: Attachment):
-            path = os.path.join("images", "lmao_images")
-            if not os.path.exists(path):
-                os.mkdir(path)
-            await imagen.save(path, imagen.filename)
+            if not os.path.exists(c.LMAO_IMG_PATH):
+                os.mkdir(c.LMAO_IMG_PATH)
+            await imagen.save(c.LMAO_IMG_PATH, imagen.filename)
             await interaction.response.send_message("Imagen de lmao guardada.", ephemeral=True)
 
         @self.command(name="lmao")
@@ -82,9 +79,8 @@ class LCDuroCommands(CommandTree):
             picture = self.cargar_lmao_images(images)
             await interaction.response.send_message(file=picture)
 
-    def obtener_imagenes(self, image_type):
-        path = os.path.join("images", image_type + "_images")
-        images = os.listdir(path)
+    def obtener_imagenes(self, image_path):
+        images = os.listdir(image_path)
         images = [image for image in images if image not in self.duro_images]
         return images
 

@@ -1,5 +1,5 @@
 import discord
-from LCBot import LCBot
+from TRHBot import LCBot
 import logging
 from logging.handlers import RotatingFileHandler
 import colorlog
