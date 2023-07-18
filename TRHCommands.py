@@ -1,6 +1,6 @@
 from discord.app_commands import CommandTree
 from TRHMusicCommands import LCMusicCommands
-from TRHDuroCommands import LCDuroCommands
+# from TRHDuroCommands import LCDuroCommands
 from discord.app_commands import checks
 from youtube_upload_detection import SearchForNewVideo
 from googleapiclient.errors import HttpError
@@ -10,7 +10,7 @@ import discord
 import typing
 
 
-class LCCommands(LCDuroCommands, LCMusicCommands, CommandTree):
+class LCCommands(LCMusicCommands, CommandTree):
     def __init__(self, client):
         super().__init__(client)
 

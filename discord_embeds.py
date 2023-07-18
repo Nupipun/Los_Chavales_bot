@@ -20,21 +20,21 @@ def help_embed(choice):
                        "**/pause** - _Pauses playback._\n"
                        "**/resume** - _Resumes playback._\n"
                        "**/volume** - _Changes the volume._\n")
-    elif choice == "admin":
-        description = ("**ADMINISTRATOR COMMANDS**\n"
-                       "**/announce** - _Announces a message in a channel._\n"
-                       "**/vidcheck** - _Checks for new video uploads._\n")
     elif choice == "durobot":
-        description = ("**DUROBOT COMMANDS**\n"
-                       "**/durosave** - _Saves a new image in the duro database._\n"
-                       "**/duro** - _Sends a random image from the duro database._\n"
-                       "**/gatosave** - _Saves a new image in the gato database._\n"
-                       "**/gato** - _Sends a random image from the gato database._\n"
-                       "**/borzoisave** - _Saves a new image in the borzoi database._\n"
-                       "**/borzoi** - _Sends a random image from the borzoi database._\n"
-                       "**/lmaosave** - _Saves a new image in the lmao database._\n"
-                       "**/lmao** - _Sends a random image from the lmao database._\n"
-                       )
+        # description = ("**DUROBOT COMMANDS**\n"
+        #                "**/durosave** - _Saves a new image in the duro database._\n"
+        #                "**/duro** - _Sends a random image from the duro database._\n"
+        #                "**/gatosave** - _Saves a new image in the gato database._\n"
+        #                "**/gato** - _Sends a random image from the gato database._\n"
+        #                "**/borzoisave** - _Saves a new image in the borzoi database._\n"
+        #                "**/borzoi** - _Sends a random image from the borzoi database._\n"
+        #                "**/lmaosave** - _Saves a new image in the lmao database._\n"
+        #                "**/lmao** - _Sends a random image from the lmao database._\n"
+        #                )
+        description = (
+            "**DUROBOT COMMANDS**\n"
+            "Durobot integration is currently disabled.\n"
+        )
     else:
         description = "**Choose a valid option (general, music, admin, durobot).**"
 

@@ -4,7 +4,7 @@ from card_image_logic import create_welcome_card
 from io import BytesIO
 import wavelink
 from TRHMusicEvents import LCMusicEvents
-from TRH import LCCommands
+from TRHCommands import LCCommands
 
 
 class LCBot(LCMusicEvents, discord.Client):
