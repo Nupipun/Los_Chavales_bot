@@ -24,7 +24,6 @@ class LCMusicCommands(CommandTree):
         async def queue(interaction: discord.Interaction):
             await interaction.response.defer()
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
 
@@ -134,7 +133,6 @@ class LCMusicCommands(CommandTree):
             if len(client.voice_clients) == 0:
                 await connect_logic(interaction)
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             player.autoplay = True
 
             if is_spotify_link(search):
@@ -209,7 +207,6 @@ class LCMusicCommands(CommandTree):
         @self.command(name="nowplaying")
         async def nowplaying(interaction: discord.Interaction):
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
             elif not player.is_playing or player is None:
@@ -222,7 +219,6 @@ class LCMusicCommands(CommandTree):
         async def skip(interaction: discord.Interaction, count: typing.Optional[int] = 0):
             """Skips the current track. If a number is specified, skips that many tracks."""
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
 
@@ -245,7 +241,6 @@ class LCMusicCommands(CommandTree):
         @self.command(name="stop")
         async def stop(interaction: discord.Interaction):
             player = node.get_player(interaction.guild.id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
             elif not player.is_playing or player is None:
@@ -277,7 +272,6 @@ class LCMusicCommands(CommandTree):
         @self.command(name="disconnect")
         async def disconnect(interaction: discord.Interaction):
             player = node.get_player(interaction.guild.id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
 
@@ -295,7 +289,6 @@ class LCMusicCommands(CommandTree):
         @self.command(name="volume")
         async def volume(interaction: discord.Interaction, volume_number: int):
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
 
@@ -310,7 +303,6 @@ class LCMusicCommands(CommandTree):
                 hours: typing.Optional[int] = 0
         ):
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
             if not player.is_playing or player is None:
@@ -342,7 +334,6 @@ class LCMusicCommands(CommandTree):
         @self.command(name="pause")
         async def pause(interaction: discord.Interaction):
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
             elif not player.is_playing or player is None:
@@ -353,7 +344,6 @@ class LCMusicCommands(CommandTree):
         @self.command(name="resume")
         async def resume(interaction: discord.Interaction):
             player = node.get_player(interaction.guild_id)
-            player.auto_queue = False
             if len(client.voice_clients) == 0:
                 return await interaction.response.send_message(embed=embeds.not_connected_to_voicechat_embed())
             elif not player.is_playing or player is None:
