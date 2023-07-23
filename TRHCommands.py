@@ -8,6 +8,8 @@ import constants as const
 import discord_embeds as embeds
 import discord
 import typing
+from io import BytesIO
+from card_image_logic import create_welcome_card
 
 
 class LCCommands(LCMusicCommands, CommandTree):
@@ -21,6 +23,25 @@ class LCCommands(LCMusicCommands, CommandTree):
         @self.command(name="help")
         async def help(interaction: discord.Interaction, option: typing.Optional[str] = "general"):
             await interaction.response.send_message(embed=embeds.help_embed(option), ephemeral=True)
+
+        @checks.has_permissions(administrator=True)
+        @self.command(name="createwelcomecard")
+        async def createwelcomecard(interaction: discord.Interaction, user: discord.User):
+            channel = await client.fetch_channel(const.WELCOME_CHANNEL_ID)
+            user_id = interaction.user.id
+
+            user = await client.fetch_user(user_id)
+            avatar_data = BytesIO(await user.display_avatar.read())
+
+            card = create_welcome_card(user, avatar_data)
+
+            file = discord.File(card, filename="welcome_card.png")
+            msg = (
+                f"Hello {interaction.user.mention} welcome to {const.SERVER_NAME}\n"
+                f"\nHola {interaction.user.mention} bienvenido a {const.SERVER_NAME}!"
+                )
+
+            await channel.send(msg, file=file)
 
         # ADMINISTRATOR COMMANDS
         @checks.has_permissions(administrator=True)

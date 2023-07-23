@@ -12,6 +12,7 @@ import asyncio
 
 class LCMusicCommands(CommandTree):
     def __init__(self, client):
+        """Initialize the class."""
         super().__init__(client)
         node = wavelink.NodePool.get_node()
 
@@ -179,7 +180,7 @@ class LCMusicCommands(CommandTree):
                     cola_link.append(track.uri)
 
         def get_spotify_track_id(url: str, query: str) -> typing.Optional[str]:
-            """Returns the track ID from a Spotify track URL."""
+            """Return the track ID from a Spotify track URL."""
             if query == "track":
                 match = re.search(r"track\/(\w+)", url)
             elif query == "playlist":
@@ -189,11 +190,11 @@ class LCMusicCommands(CommandTree):
             return None
 
         def is_spotify_link(url: str) -> bool:
-            """Returns True if the URL is a Spotify URL."""
+            """Return True if the URL is a Spotify URL."""
             return url.startswith("https://open.spotify.com/")
 
         def get_track_name_from_spotify(id: str, query_type: str) -> typing.Optional[str]:
-            """Returns the track name and artist name from a Spotify track ID."""
+            """Return the track name and artist name from a Spotify track ID."""
             client_credentials_manager = SpotifyClientCredentials(client_id=const.SPOTIFY_CLIENT_ID,
                                                                   client_secret=const.SPOTIFY_CLIENT_SECRET)
             sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)

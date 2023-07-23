@@ -36,7 +36,8 @@ class LCBot(LCMusicEvents, discord.Client):
         card = create_welcome_card(user, avatar_data)
 
         file = discord.File(card, filename="welcome_card.png")
-        msg = f"Hello {member} welcome to {c.SERVER_NAME}\n\nHola {member} bienvenido a {c.SERVER_NAME}!"
+        msg = f"Hello {member.mention} welcome to {c.SERVER_NAME}\n"
+        f"\nHola {member.mention} bienvenido a {c.SERVER_NAME}!"
 
         await channel.send(msg, file=file)
 
